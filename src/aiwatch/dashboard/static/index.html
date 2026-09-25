@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aiwatch</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  :root { --bg:#fafaf9; --fg:#1c1917; --muted:#78716c; --line:#e7e5e4; --card:#fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0c0a09; --fg:#f5f5f4; --muted:#a8a29e; --line:#292524; --card:#1c1917; } }
+  body { margin:0; font:14px/1.5 system-ui, sans-serif; background:var(--bg); color:var(--fg); }
+  main { max-width:1100px; margin:0 auto; padding:24px 16px; }
+  h1 { font-size:20px; margin:0 0 4px; } p.note { color:var(--muted); margin:0 0 20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:16px; overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { color:var(--muted); font-weight:500; }
+  select { font:inherit; padding:4px 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>aiwatch</h1>
+  <p class="note">All costs are <strong>estimates</strong> from your price table. Calls without a price entry or token counts are excluded from cost.</p>
+  <div class="card">
+    <label>Range <select id="since"><option>24h</option><option selected>7d</option><option>30d</option></select></label>
+  </div>
+  <div class="card"><canvas id="daily" height="110"></canvas></div>
+  <div class="card"><table id="summary"><thead></thead><tbody></tbody></table></div>
+</main>
+<script>
+let chart;
+async function load() {
+  const since = document.getElementById("since").value;
+  const [rows, daily] = await Promise.all([
+    fetch(`/api/summary?since=${since}`).then(r => r.json()),
+    fetch(`/api/daily?since=${since}`).then(r => r.json()),
+  ]);
+  const cols = ["provider","model","calls","error_rate","prompt_tokens","completion_tokens","est_cost_usd","p50_ms","p95_ms"];
+  document.querySelector("#summary thead").innerHTML = "<tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr>";
+  document.querySelector("#summary tbody").innerHTML = rows.length
+    ? rows.map(r => "<tr>" + cols.map(c => `<td>${r[c] ?? "-"}</td>`).join("") + "</tr>").join("")
+    : `<tr><td colspan="${cols.length}">No calls in range.</td></tr>`;
+  const days = [...new Set(daily.map(d => d.day))];
+  const models = [...new Set(daily.map(d => d.model))];
+  const datasets = models.map(m => ({
+    label: m,
+    data: days.map(day => Number((daily.find(d => d.day === day && d.model === m) || {}).est_cost_usd || 0)),
+  }));
+  chart?.destroy();
+  chart = new Chart(document.getElementById("daily"), {
+    type: "bar",
+    data: { labels: days, datasets },
+    options: { plugins: { title: { display: true, text: "Estimated cost per day (USD)" } }, scales: { x: { stacked: true }, y: { stacked: true } } },
+  });
+}
+document.getElementById("since").addEventListener("change", load);
+load();
+</script>
+</body>
+</html>
