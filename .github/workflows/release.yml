@@ -2,8 +2,11 @@
 # Before the first release: check the name is free on PyPI and register this repo as a trusted publisher.
 name: release
 on:
-  push:
-    tags: ["v*"]
+  # Manual only until the PyPI name is checked and trusted publishing is configured.
+  # Re-enable tag trigger afterwards:
+  #   push:
+  #     tags: ["v*"]
+  workflow_dispatch:
 jobs:
   publish:
     runs-on: ubuntu-latest
