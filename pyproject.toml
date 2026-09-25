@@ -1,12 +1,25 @@
 [project]
 name = "aiwatch"
 version = "0.1.0"
-description = "Add your description here"
+description = "Local-first LLM usage and cost tracking: SDK instrumentation, CLI and dashboard"
 readme = "README.md"
 authors = [
     { name = "Chaitanya Mhetre", email = "mhetrechaitanya06@gmail.com" }
 ]
 requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["llm", "openai", "anthropic", "gemini", "cost", "observability", "tokens"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: System :: Monitoring",
+    "Typing :: Typed",
+]
 dependencies = [
     "fastapi>=0.141.1",
     "pydantic>=2.13.5",
@@ -14,6 +27,11 @@ dependencies = [
     "typer>=0.27.2",
     "uvicorn>=0.54.0",
 ]
+
+[project.optional-dependencies]
+openai = ["openai>=3.0"]
+anthropic = ["anthropic>=1.0"]
+gemini = ["google-genai>=2.0"]
 
 [build-system]
 requires = ["uv_build>=0.12.6,<0.13.0"]

@@ -1,0 +1,18 @@
+# Publishes to PyPI with trusted publishing when a v* tag is pushed.
+# Before the first release: check the name is free on PyPI and register this repo as a trusted publisher.
+name: release
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen && make check
+      - run: uv build
+      - uses: pypa/gh-action-pypi-publish@release/v1

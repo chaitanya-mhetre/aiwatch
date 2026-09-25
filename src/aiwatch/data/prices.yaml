@@ -8,6 +8,7 @@
 prices:
   # Fake entries used by the examples and the test-suite.
   - {provider: demo, model: "demo-*", effective_from: 2026-01-01, input_per_mtok: 1.00, output_per_mtok: 2.00, source: FAKE}
+  - {provider: openai, model: "demo-*", effective_from: 2026-01-01, input_per_mtok: 1.00, output_per_mtok: 2.00, source: FAKE}
 
   # Template for a real entry:
   # - provider: openai            # openai | anthropic | gemini | openrouter | ollama
