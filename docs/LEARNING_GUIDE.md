@@ -91,6 +91,13 @@ clash. Two design points worth explaining in an interview:
   closed in one go (`start = end - latency`). The trade-off is that it isn't the active context during the request. `TeeSink`
   (`sinks.py`) fans records out to SQLite and OTel and isolates failures.
 
+### Benchmarking without fooling yourself
+`benchmarks/streaming.py` and the story in `docs/benchmarks.md`. Measuring configurations in sequential blocks lets
+changes in machine load and state (a growing in-memory list, warm caches) show up as a "difference" between them. The fix:
+**interleave** the configurations in many small rounds, reset state per block, use **medians**, and check the result against a
+**profiler**. Here the first, sequential version reported 59 µs/chunk. The interleaved one reported about 1.3 µs/chunk, which
+matched cProfile.
+
 ## 4. Interview questions (with short answers)
 1. **How do you instrument a third-party SDK without changing call sites?** Patch the method on its class and wrap the original.
    Keep a reference so it can be restored, and make patching idempotent.
@@ -140,7 +147,13 @@ clash. Two design points worth explaining in an interview:
     HTTP request) don't nest under it. Fixing that means starting the span when the call starts and keeping it open, which is harder
     for streams that end in `__del__`.
 
+24. **Your benchmark says A is 70% slower than B, but the profiler says the code path is tiny. What do you suspect?** A measurement
+    artefact: drift in machine load between sequential blocks, state that grows over the run, or warm-up. Interleave, reset
+    state, take medians, repeat runs.
+25. **Why is per-chunk overhead the useful unit for streams?** The proxy's work scales with chunk count, and one record is written at
+    the end. Per-chunk cost lets you predict overhead for any stream length.
+
 ## 5. Try it yourself
 - Add OpenAI `embeddings.create`: write a `CallSpec` with `operation="embedding"` and a test using `Router`.
-- Measure streaming overhead by extending `benchmarks/overhead.py`.
+- Re-run `benchmarks/streaming.py 2000 200 20` (200 chunks) and check the per-chunk overhead stays roughly constant.
 - Run `examples/otel_jaeger.py` against a local Jaeger and find the `aiwatch.est_cost_usd` attribute in the UI.

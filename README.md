@@ -123,7 +123,8 @@ tag is pushed (not done yet). A `Dockerfile` is included for running the dashboa
 
 ## Performance
 Measured on one laptop (see [docs/benchmarks.md](docs/benchmarks.md)): ≈ 61 µs overhead per non-streaming call with the
-in-memory sink, and ≈ 108 µs with SQLite. That's small next to real LLM latency. Streaming overhead hasn't been measured yet (TBD).
+in-memory sink, and ≈ 108 µs with SQLite. For a 50-chunk stream it's ≈ 65 µs (sync, memory) to ≈ 340 µs (async, SQLite) per call, or about
+1–7 µs per chunk (busy laptop, interleaved rounds). All of that is small next to real LLM latency.
 
 ## Engineering trade-offs
 - **Monkey-patching vs. a proxy.** Patching needs no infrastructure and keeps call sites unchanged, but it's tied to SDK internals
@@ -142,7 +143,7 @@ in-memory sink, and ≈ 108 µs with SQLite. That's small next to real LLM laten
   the request: HTTP spans from other instrumentation appear next to the aiwatch span, not nested under it.
 
 ## Roadmap
-- Measuring streaming overhead and multi-threaded SQLite throughput
+- Measuring multi-threaded SQLite throughput; re-running the benchmarks on a quiet machine
 - Embeddings calls
 - Publishing 0.1.0 to PyPI
 

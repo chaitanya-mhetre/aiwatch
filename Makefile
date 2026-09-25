@@ -14,3 +14,4 @@ build:
 	uv build
 bench:
 	uv run python benchmarks/overhead.py
+	uv run python benchmarks/streaming.py

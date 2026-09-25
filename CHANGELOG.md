@@ -6,6 +6,7 @@
   `aiwatch.*` extras (cost, TTFT, tags). Verified against a local Jaeger v2.
 - `TeeSink` to fan records out to several sinks; a failing sink doesn't stop the others.
 - `AIWATCH_OTEL=1` makes the default sink SQLite + OTel.
+- `benchmarks/streaming.py`: streaming overhead, sync and async, interleaved rounds. Results in docs/benchmarks.md.
 
 ## 0.1.0 — 2026-09-25 (unreleased, not on PyPI)
 - Instrumentation for OpenAI (chat completions, Responses API), Anthropic (messages) and Gemini
