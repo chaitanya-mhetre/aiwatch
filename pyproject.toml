@@ -32,6 +32,9 @@ dependencies = [
 openai = ["openai>=3.0"]
 anthropic = ["anthropic>=1.0"]
 gemini = ["google-genai>=2.0"]
+otel = [
+    "opentelemetry-api>=1.27",
+]
 
 [build-system]
 requires = ["uv_build>=0.12.6,<0.13.0"]
@@ -44,6 +47,8 @@ dev = [
     "httpx>=0.28.1",
     "mypy>=2.3.1",
     "openai>=3.19.2",
+    "opentelemetry-exporter-otlp-proto-http>=1.45.0",
+    "opentelemetry-sdk>=1.45.0",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "ruff>=0.16.9",

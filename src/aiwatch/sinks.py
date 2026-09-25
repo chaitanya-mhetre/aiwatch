@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 import threading
 from collections.abc import Iterator
@@ -12,6 +13,8 @@ from pathlib import Path
 from typing import Protocol
 
 from aiwatch.record import CallRecord
+
+log = logging.getLogger("aiwatch")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS calls (
@@ -62,6 +65,31 @@ class MemorySink:
 
     def close(self) -> None:
         pass
+
+
+class TeeSink:
+    """Fan one record out to several sinks, e.g. SQLite for reports plus OTel for traces.
+
+    A failing sink doesn't stop the others; the error is logged and swallowed, in line with
+    aiwatch's rule that recording must never break the caller.
+    """
+
+    def __init__(self, *sinks: Sink) -> None:
+        self.sinks = sinks
+
+    def write(self, record: CallRecord) -> None:
+        for sink in self.sinks:
+            try:
+                sink.write(record)
+            except Exception:
+                log.debug("aiwatch: sink %r failed", sink, exc_info=True)
+
+    def close(self) -> None:
+        for sink in self.sinks:
+            try:
+                sink.close()
+            except Exception:
+                log.debug("aiwatch: closing sink %r failed", sink, exc_info=True)
 
 
 class JSONLSink:

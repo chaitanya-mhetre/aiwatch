@@ -19,7 +19,7 @@ from typing import Any, ParamSpec, TypeVar, cast
 
 from aiwatch.pricing import PriceTable
 from aiwatch.record import CallRecord, Status
-from aiwatch.sinks import Sink, SQLiteSink
+from aiwatch.sinks import Sink, SQLiteSink, TeeSink
 
 log = logging.getLogger("aiwatch")
 if os.environ.get("AIWATCH_DEBUG"):
@@ -41,6 +41,19 @@ def default_db_path() -> Path:
     return Path(os.environ.get("AIWATCH_DB", str(DEFAULT_DB)))
 
 
+def default_sink() -> Sink:
+    """SQLite by default. With ``AIWATCH_OTEL=1``, also emit OpenTelemetry spans.
+
+    The OTel part needs ``pip install aiwatch[otel]`` and a TracerProvider set up by the app.
+    """
+    sqlite = SQLiteSink(default_db_path())
+    if os.environ.get("AIWATCH_OTEL", "").lower() in ("1", "true", "yes"):
+        from aiwatch.otel import OTelSink
+
+        return TeeSink(sqlite, OTelSink())
+    return sqlite
+
+
 class Recorder:
     def __init__(
         self,
@@ -56,7 +69,7 @@ class Recorder:
     def sink(self) -> Sink:
         # Created lazily so that importing aiwatch never touches the filesystem.
         if self._sink is None:
-            self._sink = SQLiteSink(default_db_path())
+            self._sink = default_sink()
         return self._sink
 
     @property
