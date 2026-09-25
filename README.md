@@ -52,6 +52,9 @@ your code ──► OpenAI / Anthropic / Gemini SDK method
 - A missing token count is stored as `NULL`, never guessed. A model with no price entry has an **unknown** cost, never $0.
 - Tags via `with aiwatch.tags(feature="x")` or `@aiwatch.track(feature="x")`. They're backed by `ContextVar`, so they stay correct across asyncio tasks.
 - Every record stores the `price_version` used, so historical costs can be reproduced after prices change.
+- Optional **OpenTelemetry export** (`pip install aiwatch[otel]`): one CLIENT span per call, named `{operation} {model}` with
+  `gen_ai.*` attributes from the GenAI semantic conventions, plus cost, TTFT and tags under `aiwatch.*`. Works with Jaeger,
+  Tempo or any OTLP backend. Checked against a local Jaeger v2 (see `examples/otel_jaeger.py`).
 
 ## Tech stack
 Python 3.12+, Typer (CLI), FastAPI + uvicorn + Chart.js (dashboard), SQLite (stdlib), Pydantic v2, PyYAML.
@@ -80,6 +83,10 @@ async def rerank(...): ...
 # In tests or notebooks:
 sink = aiwatch.MemorySink()
 aiwatch.configure(sink=sink)
+
+# SQLite for reports *and* OpenTelemetry spans (the app sets up its own TracerProvider/exporter):
+from aiwatch.otel import OTelSink
+aiwatch.configure(sink=aiwatch.TeeSink(aiwatch.SQLiteSink(path), OTelSink()))
 ```
 Real prices are **not** bundled, because they change and stale numbers mislead. Copy them from each provider's pricing page into your own
 file (the format is in `src/aiwatch/data/prices.yaml`) and set `AIWATCH_PRICES=./prices.yaml`. Then check it with `aiwatch prices validate prices.yaml`.
@@ -89,6 +96,7 @@ file (the format is in `src/aiwatch/data/prices.yaml`) and set `AIWATCH_PRICES=.
 | `AIWATCH_DB` | SQLite path (default `.aiwatch/aiwatch.db`) |
 | `AIWATCH_PRICES` | your price YAML |
 | `AIWATCH_DEBUG` | log aiwatch's own errors |
+| `AIWATCH_OTEL` | `1` = also emit OpenTelemetry spans from the default sink (needs `aiwatch[otel]`) |
 
 ## Demo
 ```
@@ -130,9 +138,10 @@ in-memory sink, and ≈ 108 µs with SQLite. That's small next to real LLM laten
 - OpenAI chat streams report usage only with `stream_options={"include_usage": True}`.
 - Wrapped method paths depend on SDK versions (tested: openai 3.19, anthropic 1.8, google-genai 2.25).
 - `prices update` (fetching prices automatically) isn't implemented; prices are entered by hand on purpose.
+- OTel spans are emitted *after* the call finishes (with the real start/end timestamps), so they aren't the active context during
+  the request: HTTP spans from other instrumentation appear next to the aiwatch span, not nested under it.
 
 ## Roadmap
-- OpenTelemetry sink using the GenAI semantic conventions (spec milestone M6)
 - Measuring streaming overhead and multi-threaded SQLite throughput
 - Embeddings calls
 - Publishing 0.1.0 to PyPI

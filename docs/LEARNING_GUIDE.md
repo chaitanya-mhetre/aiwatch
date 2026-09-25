@@ -80,6 +80,17 @@ them. An early test run actually reached the real API with a fake key. The fix i
 `http_client=httpx2.Client(transport=MockTransport(handler))`. With no real transport configured, a test *can't* reach the network.
 Gemini accepts `HttpOptions(httpx_client=...)`.
 
+### OpenTelemetry spans and the GenAI semantic conventions
+`src/aiwatch/otel.py`. A **span** is one timed operation with attributes. Semantic conventions are agreed attribute names,
+so every backend knows `gen_ai.usage.input_tokens` means input tokens no matter which library emitted it. aiwatch uses
+`gen_ai.*` for what the conventions cover and its own `aiwatch.*` namespace for the rest (cost, TTFT, tags), so there's no
+clash. Two design points worth explaining in an interview:
+- **The library depends only on `opentelemetry-api`, never the SDK.** The application owns the TracerProvider and exporter.
+  Without one, the API's no-op tracer makes the sink nearly free. This is the standard rule for instrumentation libraries.
+- **The span is created after the call, with explicit timestamps.** Tokens are only known at the end, so the span is opened and
+  closed in one go (`start = end - latency`). The trade-off is that it isn't the active context during the request. `TeeSink`
+  (`sinks.py`) fans records out to SQLite and OTel and isolates failures.
+
 ## 4. Interview questions (with short answers)
 1. **How do you instrument a third-party SDK without changing call sites?** Patch the method on its class and wrap the original.
    Keep a reference so it can be restored, and make patching idempotent.
@@ -119,10 +130,17 @@ Gemini accepts `HttpOptions(httpx_client=...)`.
     catch it when the SDK version is bumped.
 19. **Why normalise Anthropic cache tokens?** So "prompt tokens" means the same thing for every provider. Otherwise cross-provider comparisons
     and pricing would be wrong.
-20. **What would you add for production at scale?** Sampling, a batching async writer, an OTel exporter, a central store,
-    and budget alerts.
+20. **What would you add for production at scale?** Sampling, a batching async writer, a central store, and budget alerts.
+    (The OTel exporter now exists: `aiwatch.otel`.)
+21. **Why should an instrumentation library depend on `opentelemetry-api` and not the SDK?** The app decides the exporter,
+    sampling and resource. The library only creates spans. With no SDK configured, the API is a cheap no-op.
+22. **Why omit a token attribute instead of sending 0 when the count is unknown?** 0 is a measurement. Sending it would make
+    dashboards sum and average a value that was never observed. A missing attribute is honest.
+23. **Your span is emitted after the call. What does that cost you?** It isn't the active context, so child spans (e.g. the
+    HTTP request) don't nest under it. Fixing that means starting the span when the call starts and keeping it open, which is harder
+    for streams that end in `__del__`.
 
 ## 5. Try it yourself
 - Add OpenAI `embeddings.create`: write a `CallSpec` with `operation="embedding"` and a test using `Router`.
 - Measure streaming overhead by extending `benchmarks/overhead.py`.
-- Implement an OTel sink that emits a span per call following the GenAI semantic conventions.
+- Run `examples/otel_jaeger.py` against a local Jaeger and find the `aiwatch.est_cost_usd` attribute in the UI.
