@@ -1,0 +1,20 @@
+# aiwatch price table (USD per 1M tokens). ESTIMATES ONLY.
+#
+# Real provider prices are deliberately NOT pre-filled: they change often, and a stale number that
+# looks authoritative is worse than "unknown". Copy prices from each provider's pricing page into
+# your own file and point aiwatch at it:  AIWATCH_PRICES=./prices.yaml
+#
+# Models without an entry report cost as unknown (null), never as free.
+prices:
+  # Fake entries used by the examples and the test-suite.
+  - {provider: demo, model: "demo-*", effective_from: 2026-01-01, input_per_mtok: 1.00, output_per_mtok: 2.00, source: FAKE}
+
+  # Template for a real entry:
+  # - provider: openai            # openai | anthropic | gemini | openrouter | ollama
+  #   model: <model-name>         # exact name, or a prefix ending in "*"
+  #   effective_from: 2026-09-01
+  #   input_per_mtok: <from pricing page>
+  #   output_per_mtok: <from pricing page>
+  #   cached_input_per_mtok: <optional>
+  #   source: https://openai.com/api/pricing/
+  #   checked_on: 2026-09-25
